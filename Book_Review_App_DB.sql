@@ -8,12 +8,13 @@ CREATE TABLE Users (
 
 -- Create Table for Books
 CREATE TABLE Books (
-    id INT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    isbn VARCHAR(13) NOT NULL UNIQUE,
+    isbn VARCHAR(20) PRIMARY KEY,
+    title VARCHAR(255),
+    author VARCHAR(255),
+    genre VARCHAR(255),
     publisher VARCHAR(255),
-    publication_year INT, 
-    page_count INT
+    publicationyear YEAR,
+    pagecount INT
 );
 
 -- Create Table for Reviews
@@ -24,7 +25,7 @@ CREATE TABLE Reviews (
     rating INT,
     written_review VARCHAR(500),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (book_id) REFERENCES Books (id), 
+    #FOREIGN KEY (book_id) REFERENCES Books (id),
     FOREIGN KEY (user_id) REFERENCES Users (id) 
 );
 
@@ -34,7 +35,7 @@ CREATE TABLE Favorites (
     user_id INT NOT NULL,
     book_id INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users (id), 
-    FOREIGN KEY (book_id) REFERENCES Books (id), 
+    #FOREIGN KEY (book_id) REFERENCES Books (id),
     UNIQUE (user_id, book_id)
 );
 
@@ -58,8 +59,8 @@ CREATE INDEX idx_users_role ON Users (role);
 CREATE INDEX idx_books_title ON Books (title);
 CREATE INDEX idx_books_isbn ON Books (isbn);
 CREATE INDEX idx_books_publisher ON Books (publisher);
-CREATE INDEX idx_books_publication_year ON Books (publication_year);
-CREATE INDEX idx_books_page_count ON Books (page_count);
+#CREATE INDEX idx_books_publication_year ON Books (publication_year);
+#CREATE INDEX idx_books_page_count ON Books (page_count);
 
 
 CREATE INDEX idx_reviews_book_id ON Reviews (book_id);
@@ -90,10 +91,10 @@ INSERT INTO Users (id, username, email_address, password, role) VALUES
 (3, 'admin1', 'admin1@example.com', 'adminpass', 'admin');
 
 -- Insert Test Data into Books Table
-INSERT INTO Books (id, title, isbn, publisher, publication_year, page_count) VALUES
-(1, 'Book A', '1234567890123', 'Publisher A', 2020, 300),
-(2, 'Book B', '9876543210987', 'Publisher B', 2018, 250),
-(3, 'Book C', '4567891234567', 'Publisher C', 2022, 400);
+#INSERT INTO Books (isbn, title, isbn, publisher, publicationyear, pagecount) VALUES
+#(1, 'Book A', '1234567890123', 'Publisher A', 2020, 300),
+#(2, 'Book B', '9876543210987', 'Publisher B', 2018, 250),
+#(3, 'Book C', '4567891234567', 'Publisher C', 2022, 400);
 
 -- Insert Test Data into Reviews Table
 INSERT INTO Reviews (id, book_id, user_id, rating, written_review) VALUES
