@@ -1,9 +1,7 @@
 CREATE TABLE Users (
-    id INT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    username VARCHAR(50) PRIMARY KEY UNIQUE,
     email_address VARCHAR(255) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(10) NOT NULL
+    password VARCHAR(255) NOT NULL UNIQUE
 );
 
 -- Create Table for Books
@@ -25,8 +23,8 @@ CREATE TABLE Reviews (
     rating INT,
     written_review VARCHAR(500),
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    #FOREIGN KEY (book_id) REFERENCES Books (id),
-    FOREIGN KEY (user_id) REFERENCES Users (id) 
+    FOREIGN KEY (book_id) REFERENCES Books (isbn)
+    #FOREIGN KEY (user_id) REFERENCES Users (id)
 );
 
 -- Create Table for Favorites
@@ -34,7 +32,7 @@ CREATE TABLE Favorites (
     id INT PRIMARY KEY,
     user_id INT NOT NULL,
     book_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES Users (id), 
+    #FOREIGN KEY (user_id) REFERENCES Users (id),
     #FOREIGN KEY (book_id) REFERENCES Books (id),
     UNIQUE (user_id, book_id)
 );
@@ -45,15 +43,15 @@ CREATE TABLE BookRequests (
     user_id INT NOT NULL,
     isbn VARCHAR(13) NOT NULL,
     request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(20) DEFAULT 'Pending',
-    FOREIGN KEY (user_id) REFERENCES Users (id)
+    status VARCHAR(20) DEFAULT 'Pending'
+    #FOREIGN KEY (user_id) REFERENCES Users (id)
 );
 
 
 CREATE INDEX idx_users_username ON Users (username);
 CREATE INDEX idx_users_email ON Users (email_address);
 CREATE INDEX idx_users_password ON Users (password);
-CREATE INDEX idx_users_role ON Users (role);
+#CREATE INDEX idx_users_role ON Users (role);
 
 
 CREATE INDEX idx_books_title ON Books (title);
@@ -79,16 +77,12 @@ CREATE INDEX idx_bookrequests_status ON BookRequests (status);
 
 
 
+INSERT INTO Users (username, email_address, password) VALUES
+#INSERT INTO Users (id, username, email_address, password, role) VALUES
 
-
-
-
-
-
-INSERT INTO Users (id, username, email_address, password, role) VALUES
-(1, 'user1', 'user1@example.com', 'password123', 'user'),
-(2, 'user2', 'user2@example.com', 'password123', 'user'),
-(3, 'admin1', 'admin1@example.com', 'adminpass', 'admin');
+('user1', 'user1@example.com', 'password123'),
+('user2', 'user2@example.com', 'password123'),
+('admin1', 'admin1@example.com', 'adminpass');
 
 -- Insert Test Data into Books Table
 #INSERT INTO Books (isbn, title, isbn, publisher, publicationyear, pagecount) VALUES
