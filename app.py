@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import mysql.connector
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Replace with a strong secret key
+app.secret_key = 'CS480_FINAL_PROJECT_SECRET_KEY'  # Replace with a strong secret key
 
 # Database configuration
 db_config = {
