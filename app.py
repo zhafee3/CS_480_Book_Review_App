@@ -10,8 +10,8 @@ app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    #add your passward from mysql
-    #'password': '',
+    # Add your password from MySQL
+    'password': 'your_password',  # Replace with your MySQL password
     'database': 'book_reviews',
 }
 
@@ -27,6 +27,7 @@ def hash_password(password):
 def verify_password(stored_password, provided_password):
     return hmac.compare_digest(stored_password, hash_password(provided_password))
 
+# User registration
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -37,41 +38,32 @@ def register():
         # Hash the password
         hashed_password = hash_password(password)
 
-        # Debug: Print user details
-        print(f"Attempting to register: {username}, {email}, {hashed_password}")
-
         # Insert the user into the database
         connection = get_db_connection()
         cursor = connection.cursor()
 
         try:
             cursor.execute(
-                "INSERT INTO Users (username, email_address, password) VALUES (%s, %s, %s)",
+                "INSERT INTO Users (username, email_address, password, role) VALUES (%s, %s, %s, 'user')",
                 (username, email, hashed_password)
             )
-            connection.commit()  # Commit changes to the database
-            print("User successfully inserted into the database.")
+            connection.commit()
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
         except mysql.connector.Error as err:
-            # Debug: Log the error
-            print(f"Database error: {err}")
-            flash('Error: ' + str(err), 'danger')
+            flash(f'Error: {err}', 'danger')
         finally:
             cursor.close()
             connection.close()
 
     return render_template('register.html')
 
-
+# User login
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-
-        # Debug: Print submitted email and password
-        print(f"Email: {email}, Password: {password}")
 
         # Fetch user from the database
         connection = get_db_connection()
@@ -81,66 +73,125 @@ def login():
         cursor.close()
         connection.close()
 
-        # Debug: Check if user is found
-        if user:
-            print(f"User found: {user}")
-        else:
-            print("No user found with that email.")
-
         # Verify password
         if user and verify_password(user['password'], password):
             session['user_id'] = user['id']
             session['username'] = user['username']
+            session['role'] = user['role']  # Store user role in session
             flash('Login successful!', 'success')
-            print("Login successful, redirecting to search_data.")
             return redirect(url_for('search_data'))
         else:
             flash('Invalid credentials. Please try again.', 'danger')
-            print("Invalid credentials.")
 
     return render_template('login.html')
 
-
+# User logout
 @app.route('/logout')
 def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-@app.route('/', methods=['GET', 'POST'])
-def search_data():
-    if 'user_id' not in session:
-        flash('Please log in to access this page.', 'warning')
+# Admin: Add books
+@app.route('/admin/add_book', methods=['GET', 'POST'])
+def add_book():
+    if session.get('role') != 'admin':
+        flash('Access denied.', 'danger')
         return redirect(url_for('login'))
 
-    search_query = None
-    rows = []
-
-    # If the form is submitted
     if request.method == 'POST':
-        search_query = request.form.get('search_query')
+        isbn = request.form.get('isbn')
+        title = request.form.get('title')
+        author = request.form.get('author')
+        genre = request.form.get('genre')
+        publisher = request.form.get('publisher')
+        publication_year = request.form.get('publication_year')
+        page_count = request.form.get('page_count')
 
-        # Connect to the database
         connection = get_db_connection()
         cursor = connection.cursor()
 
-        # SQL query with wildcard search
+        try:
+            cursor.execute(
+                """
+                INSERT INTO Books (isbn, title, author, genre, publisher, publicationyear, pagecount)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (isbn, title, author, genre, publisher, publication_year, page_count)
+            )
+            connection.commit()
+            flash('Book added successfully.', 'success')
+        except mysql.connector.Error as err:
+            flash(f'Error: {err}', 'danger')
+        finally:
+            cursor.close()
+            connection.close()
+
+    return render_template('add_book.html')
+
+# User: Write a review
+@app.route('/book/<isbn>/review', methods=['GET', 'POST'])
+def write_review(isbn):
+    if 'user_id' not in session:
+        flash('Please log in to write a review.', 'warning')
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        rating = request.form.get('rating')
+        review_text = request.form.get('review_text')
+        user_id = session['user_id']
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        try:
+            cursor.execute(
+                """
+                INSERT INTO Reviews (isbn, rating, review_text, user_id, timestamp)
+                VALUES (%s, %s, %s, %s, NOW())
+                """,
+                (isbn, rating, review_text, user_id)
+            )
+            connection.commit()
+            flash('Review submitted successfully.', 'success')
+        except mysql.connector.Error as err:
+            flash(f'Error: {err}', 'danger')
+        finally:
+            cursor.close()
+            connection.close()
+
+    return render_template('write_review.html', isbn=isbn)
+
+# Search books with sorting
+@app.route('/', methods=['GET', 'POST'])
+def search_data():
+    search_query = None
+    rows = []
+
+    if request.method == 'POST':
+        search_query = request.form.get('search_query')
+        sort_by = request.form.get('sort_by')
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
         query = """
         SELECT isbn, title, author, genre, publisher, publicationyear, pagecount
         FROM Books
         WHERE isbn LIKE %s OR title LIKE %s OR author LIKE %s OR genre LIKE %s
         """
+        if sort_by == 'popularity':
+            query += " ORDER BY popularity DESC"
+        elif sort_by == 'rating':
+            query += " ORDER BY average_rating DESC"
+
         like_query = f"%{search_query}%"
         cursor.execute(query, (like_query, like_query, like_query, like_query))
-
-        # Fetch the results
         rows = cursor.fetchall()
 
-        # Close the connection
         cursor.close()
         connection.close()
 
-    # Render the HTML template
     return render_template('search.html', search_query=search_query, rows=rows)
 
 if __name__ == '__main__':
