@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import mysql.connector
 
@@ -11,8 +12,9 @@ db_config = {
     'host': 'localhost',
     'user': 'root',
     #add your passward from mysql
-    #'password': '',
+    'password': '2004',
     'database': 'book_reviews',
+    #'auth_plugin':'mysql_native_password'
 }
 
 # Connect to MySQL
@@ -126,7 +128,7 @@ def search_data():
 
         # SQL query with wildcard search
         query = """
-        SELECT isbn, title, author, genre, publisher, publicationyear, pagecount
+        SELECT isbn, title, author, genre, publisher, publication_year, page_count
         FROM Books
         WHERE isbn LIKE %s OR title LIKE %s OR author LIKE %s OR genre LIKE %s
         """
