@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import mysql.connector
 
@@ -10,9 +11,10 @@ app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    # Add your password from MySQL
-    'password': 'your_password',  # Replace with your MySQL password
+    #add your passward from mysql
+    'password': '2004',
     'database': 'book_reviews',
+    #'auth_plugin':'mysql_native_password'
 }
 
 # Connect to MySQL
@@ -176,7 +178,7 @@ def search_data():
         cursor = connection.cursor()
 
         query = """
-        SELECT isbn, title, author, genre, publisher, publicationyear, pagecount
+        SELECT isbn, title, author, genre, publisher, publication_year, page_count
         FROM Books
         WHERE isbn LIKE %s OR title LIKE %s OR author LIKE %s OR genre LIKE %s
         """
