@@ -33,6 +33,7 @@
                 <th>Publisher</th>
                 <th>Publication Year</th>
                 <th>Page Count</th>
+		<th>Actions</th>
             </tr>
             {% for row in rows %}
             <tr>
@@ -43,6 +44,11 @@
                 <td>{{ row[4] }}</td>
                 <td>{{ row[5] }}</td>
                 <td>{{ row[6] }}</td>
+		<td>
+		     <a href="{{ url_for('add_review', isbn=row[0]) }}">
+                        <button type="button">Add Review</button>
+                    </a>
+                </td>
             </tr>
             {% endfor %}
         </table>

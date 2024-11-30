@@ -145,5 +145,47 @@ def search_data():
     # Render the HTML template
     return render_template('search.html', search_query=search_query, rows=rows)
 
+@app.route('/add_review/<isbn>', methods=['GET', 'POST'])
+def add_review(isbn):
+    if 'user_id' not in session:
+        flash('Please log in to leave a review.', 'warning')
+        return redirect(url_for('login'))
+    
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM Books WHERE isbn = %s", (isbn,))
+    book = cursor.fetchone()
+
+    if not book:
+        flash('Sorry, we could not fetch the book for some reason.', 'danger')
+        return redirect(url_for('search_data'))
+    
+    if request.method == 'POST':
+        rating = request.form.get('rating')
+        written_review = request.form.get('written_review')
+
+        if not rating or not rating.isdigit() or not (1 <= int(rating) <= 5):
+            flash('Rating must be a number between 1 and 5.', 'danger')
+        else:
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO Reviews (book_id, user_id, rating, written_review)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (isbn, session['user_id'], int(rating), written_review)
+                )
+                connection.commit()  
+                flash('Review submitted successfully!', 'success')
+                return redirect(url_for('search_data'))  
+            except mysql.connector.Error as err:
+                flash(f'Error submitting review: {err}', 'danger')
+
+    cursor.close()
+    connection.close()
+    return render_template('add_review.html', book=book)
+
+
 if __name__ == '__main__':
     app.run(debug=True)
