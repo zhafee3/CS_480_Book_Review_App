@@ -196,6 +196,66 @@ def search_data():
 
     return render_template('search.html', search_query=search_query, rows=rows)
 
+@app.route('/advanced_search', methods=['GET', 'POST'])
+def advanced_search():
+    if 'user_id' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('login'))
+
+    search_query = None
+    rows = []
+
+    # If the form is submitted
+    if request.method == 'POST':
+
+        isbn = request.form.get('isbn', '').strip()
+        title = request.form.get('title', '').strip()
+        author = request.form.get('author', '').strip()
+        genre = request.form.get('genre', '').strip()
+        publisher = request.form.get('publisher', '').strip()
+        publication_year = request.form.get('publication_year', '').strip()
+        min_page_count = request.form.get('min_page_count', '').strip()
+        max_page_count = request.form.get('max_page_count', '').strip()
+    
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # SQL query with wildcard search
+        query = """
+        SELECT isbn, title, author, genre, publisher, publication_year, page_count
+        FROM Books
+        WHERE (%s = '' OR isbn LIKE %s)
+          AND (%s = '' OR title LIKE %s)
+          AND (%s = '' OR author LIKE %s)
+          AND (%s = '' OR genre LIKE %s)
+          AND (%s = '' OR publisher LIKE %s)
+          AND (%s = '' OR publication_year = %s)
+          AND (%s = '' OR page_count >= %s)
+          AND (%s = '' OR page_count <= %s)
+        """
+        params = [
+            isbn, f"%{isbn}%",
+            title, f"%{title}%",
+            author, f"%{author}%",
+            genre, f"%{genre}%",
+            publisher, f"%{publisher}%",
+            publication_year, publication_year,
+            min_page_count, min_page_count,
+            max_page_count, max_page_count
+        ]
+        cursor.execute(query, params)
+
+        # Fetch the results
+        rows = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+    # Render the HTML template
+    return render_template('advanced_search.html', search_query=search_query, rows=rows)
+
 @app.route('/add_review/<isbn>', methods=['GET', 'POST'])
 def add_review(isbn):
     if 'user_id' not in session:
@@ -229,7 +289,7 @@ def add_review(isbn):
                 )
                 connection.commit()  
                 flash('Review submitted successfully!', 'success')
-                return redirect(url_for('search_data'))  
+                return redirect(url_for('search_data'))  # Redirect to search page
             except mysql.connector.Error as err:
                 flash(f'Error submitting review: {err}', 'danger')
 

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Search</title>
+</head>
+<body>
+    <h1>Advanced Search</h1>
+    <form method="POST">
+        <label for="isbn">ISBN:</label>
+        <input type="text" id="isbn" name="isbn" placeholder="ISBN" value="{{ request.form.isbn or '' }}">
+
+        <label for="title">Title:</label>
+        <input type="text" id="title" name="title" placeholder="Title" value="{{ request.form.title or '' }}">
+
+        <label for="author">Author:</label>
+        <input type="text" id="author" name="author" placeholder="Author" value="{{ request.form.author or '' }}">
+
+        <label for="genre">Genre:</label>
+        <input type="text" id="genre" name="genre" placeholder="Genre" value="{{ request.form.genre or '' }}">
+
+        <label for="publisher">Publisher:</label>
+        <input type="text" id="publisher" name="publisher" placeholder="Publisher" value="{{ request.form.publisher or '' }}">
+
+        <label for="publication_year">Publication Year:</label>
+        <input type="number" id="publication_year" name="publication_year" placeholder="Year" value="{{ request.form.publication_year or '' }}">
+
+        <label for="min_page_count">Min Page Count:</label>
+        <input type="number" id="min_page_count" name="min_page_count" placeholder="Min Pages" value="{{ request.form.min_page_count or '' }}">
+
+        <label for="max_page_count">Max Page Count:</label>
+        <input type="number" id="max_page_count" name="max_page_count" placeholder="Max Pages" value="{{ request.form.max_page_count or '' }}">
+
+        <button type="submit">Search</button>
+    </form>
+
+    {% if rows %}
+    <h2>Search Results</h2>
+    <table>
+        <tr>
+            <th>ISBN</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Genre</th>
+            <th>Publisher</th>
+            <th>Publication Year</th>
+            <th>Page Count</th>
+	    <th>Actions</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row[0] }}</td>
+            <td>{{ row[1] }}</td>
+            <td>{{ row[2] }}</td>
+            <td>{{ row[3] }}</td>
+            <td>{{ row[4] }}</td>
+            <td>{{ row[5] }}</td>
+            <td>{{ row[6] }}</td>
+		<td>
+		     <a href="{{ url_for('add_review', isbn=row[0]) }}">
+                        <button type="button">Add Review</button>
+                    </a>
+                </td>
+
+        </tr>
+        {% endfor %}
+    </table>
+    {% elif request.method == 'POST' %}
+    <p>No results found.</p>
+    {% endif %}
+</body>
+</html>
