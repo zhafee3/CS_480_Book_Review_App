@@ -7,12 +7,14 @@ import mysql.connector
 app = Flask(__name__)
 app.secret_key = 'CS480_FINAL_PROJECT_SECRET_KEY'  # Replace with a strong secret key
 
+mySQLpassword = input("Enter Your MySQL Password: ")
+
 # Database configuration
 db_config = {
     'host': 'localhost',
     'user': 'root',
     #add your passward from mysql
-    'password': '2004',
+    'password': mySQLpassword,
     'database': 'book_reviews',
     #'auth_plugin':'mysql_native_password'
 }
