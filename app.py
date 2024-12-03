@@ -139,19 +139,24 @@ def search_data():
             FROM Books
             LEFT JOIN Reviews ON Books.isbn = Reviews.book_id
             WHERE (%s = '' OR LOWER(Books.isbn) LIKE LOWER(%s))
-            AND (%s = '' OR LOWER(Books.title) LIKE LOWER(%s))
-            AND (%s = '' OR LOWER(Books.author) LIKE LOWER(%s))
-            AND (%s = '' OR LOWER(Books.genre) LIKE LOWER(%s))
-            GROUP BY Books.isbn
+            or (%s = '' OR LOWER(Books.title) LIKE LOWER(%s))
+            or (%s = '' OR LOWER(Books.author) LIKE LOWER(%s))
+            or (%s = '' OR LOWER(Books.genre) LIKE LOWER(%s))
+            GROUP BY Books.isbn, Books.title, Books.author, Books.genre, Books.publisher, Books.publication_year, Books.page_count
         """
 
         valid_sort_columns = ['title', 'author', 'genre', 'publication_year', 'average_rating']
         if sort_by in valid_sort_columns and sort_order in ['ASC', 'DESC']:
             query += f" ORDER BY {sort_by} {sort_order}"
+        
 
         like_query = f"%{search_query}%"
-        params = [search_query, like_query, search_query, like_query,
-                  search_query, like_query, search_query, like_query]
+        print(search_query)
+        print(like_query)
+        params = [search_query, like_query, 
+                  search_query, like_query,
+                  search_query, like_query, 
+                  search_query, like_query]
         
         cursor.execute(query, params)
         rows = cursor.fetchall()
