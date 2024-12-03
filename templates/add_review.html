@@ -19,6 +19,8 @@
         <button type="submit">Submit Review</button>
     </form>
 
-    <a href="{{ url_for('search_data') }}">Return to Search</a>
+    <a href="{{ url_for('search_data', search_query=search_query, sort_by=sort_by, sort_order=sort_order) }}">
+        <button type="button">Back to Search Results</button>
+    </a>
 </body>
 </html>

@@ -19,9 +19,28 @@
     </div>
 
     <form method="POST">
-        <input type="text" name="search_query" placeholder="Search by ISBN, Title, Author, or Genre" value="{{ search_query }}">
+        <input type="text" name="search_query" placeholder="Search by Title, Author, Genre, or ISBN"
+               value="{{ search_query or '' }}">
         <button type="submit">Search</button>
+
+        <label for="sort_by">Sort by:</label>
+        <select name="sort_by" id="sort_by">
+            <option value="title" {% if sort_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="author" {% if sort_by == 'author' %}selected{% endif %}>Author</option>
+            <option value="genre" {% if sort_by == 'genre' %}selected{% endif %}>Genre</option>
+            <option value="publication_year" {% if sort_by == 'publication_year' %}selected{% endif %}>Publication Year</option>
+            <option value="average_rating" {% if sort_by == 'average_rating' %}selected{% endif %}>Average Rating</option>
+        </select> 
+        
+        <label for="sort_order">Order:</label>
+        <select name="sort_order" id="sort_order">
+            <option value="ASC" {% if sort_order == 'ASC' %}selected{% endif %}>Ascending</option>
+            <option value="DESC" {% if sort_order == 'DESC' %}selected{% endif %}>Descending</option>
+        </select>
+
+
     </form>
+
     <br>
 
     <a href="{{ url_for('advanced_search') }}">
@@ -38,7 +57,8 @@
                 <th>Publisher</th>
                 <th>Publication Year</th>
                 <th>Page Count</th>
-		<th>Actions</th>
+                <th>Average Rating</th>
+		        <th>Actions</th>
             </tr>
             {% for row in rows %}
             <tr>
@@ -48,7 +68,8 @@
                 <td>{{ row[3] }}</td>
                 <td>{{ row[4] }}</td>
                 <td>{{ row[5] }}</td>
-                <td>{{ row[6] }}</td>
+                <td>{{ row[6] | default('N/A') }}</td>
+                <td>{{ row[7] }}</td>
 		<td>
 		     <a href="{{ url_for('add_review', isbn=row[0]) }}">
                         <button type="button">Add Review</button>
