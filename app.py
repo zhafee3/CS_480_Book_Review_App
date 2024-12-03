@@ -7,14 +7,14 @@ import mysql.connector
 app = Flask(__name__)
 app.secret_key = 'CS480_FINAL_PROJECT_SECRET_KEY'  # Replace with a strong secret key
 
-mySQLpassword = input("Enter Your MySQL Password: ")
+#mySQLpassword = input("Enter Your MySQL Password: ")
 
 # Database configuration
 db_config = {
     'host': 'localhost',
     'user': 'root',
     #add your passward from mysql
-    'password': mySQLpassword,
+    'password': '2004', #Insert your own,
     'database': 'book_reviews',
     #'auth_plugin':'mysql_native_password'
 }
@@ -31,6 +31,11 @@ def hash_password(password):
 def verify_password(stored_password, provided_password):
     return hmac.compare_digest(stored_password, hash_password(provided_password))
 
+
+@app.route('/')
+def home():
+    return redirect(url_for('login'))
+
 # User registration
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -42,52 +47,65 @@ def register():
         # Hash the password
         hashed_password = hash_password(password)
 
+        # Debug: Print user details
+        print(f"Attempting to register: {username}, {email}, {hashed_password}")
+
         # Insert the user into the database
         connection = get_db_connection()
         cursor = connection.cursor()
 
         try:
             cursor.execute(
-                "INSERT INTO Users (username, email_address, password, role) VALUES (%s, %s, %s, 'user')",
+                "INSERT INTO Users (username, email_address, password) VALUES (%s, %s, %s)",
                 (username, email, hashed_password)
             )
-            connection.commit()
+            connection.commit()  # Commit changes to the database
+            print("User successfully inserted into the database.")
             flash('Registration successful! Please log in.', 'success')
             return redirect(url_for('login'))
         except mysql.connector.Error as err:
-            flash(f'Error: {err}', 'danger')
+            # Debug: Log the error
+            print(f"Database error: {err}")
+            flash('Error: ' + str(err), 'danger')
         finally:
             cursor.close()
             connection.close()
 
     return render_template('register.html')
 
-# User login
+
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # Fetch user from the database
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM Users WHERE email_address = %s", (email,))
-        user = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
 
-        # Verify password
-        if user and verify_password(user['password'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['role'] = user['role']  # Store user role in session
-            flash('Login successful!', 'success')
-            return redirect(url_for('search_data'))
-        else:
-            flash('Invalid credentials. Please try again.', 'danger')
+            cursor.execute("SELECT * FROM Users WHERE email_address = %s", (email,))
+            user = cursor.fetchone()
+
+            if user and verify_password(user['password'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                flash('Login successful!', 'success')
+                return redirect(url_for('search_data'))
+            else:
+                flash('Invalid credentials. Please try again.', 'danger')
+        finally:
+            # Close resources if they exist
+            if 'cursor' in locals() and cursor:
+                cursor.close()
+            if 'connection' in locals() and connection:
+                connection.close()
 
     return render_template('login.html')
+
+
 
 # User logout
 @app.route('/logout')
@@ -96,107 +114,52 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# Admin: Add books
-@app.route('/admin/add_book', methods=['GET', 'POST'])
-def add_book():
-    if session.get('role') != 'admin':
-        flash('Access denied.', 'danger')
-        return redirect(url_for('login'))
 
-    if request.method == 'POST':
-        isbn = request.form.get('isbn')
-        title = request.form.get('title')
-        author = request.form.get('author')
-        genre = request.form.get('genre')
-        publisher = request.form.get('publisher')
-        publication_year = request.form.get('publication_year')
-        page_count = request.form.get('page_count')
-
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        try:
-            cursor.execute(
-                """
-                INSERT INTO Books (isbn, title, author, genre, publisher, publicationyear, pagecount)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (isbn, title, author, genre, publisher, publication_year, page_count)
-            )
-            connection.commit()
-            flash('Book added successfully.', 'success')
-        except mysql.connector.Error as err:
-            flash(f'Error: {err}', 'danger')
-        finally:
-            cursor.close()
-            connection.close()
-
-    return render_template('add_book.html')
-
-# User: Write a review
-@app.route('/book/<isbn>/review', methods=['GET', 'POST'])
-def write_review(isbn):
-    if 'user_id' not in session:
-        flash('Please log in to write a review.', 'warning')
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        rating = request.form.get('rating')
-        review_text = request.form.get('review_text')
-        user_id = session['user_id']
-
-        connection = get_db_connection()
-        cursor = connection.cursor()
-
-        try:
-            cursor.execute(
-                """
-                INSERT INTO Reviews (isbn, rating, review_text, user_id, timestamp)
-                VALUES (%s, %s, %s, %s, NOW())
-                """,
-                (isbn, rating, review_text, user_id)
-            )
-            connection.commit()
-            flash('Review submitted successfully.', 'success')
-        except mysql.connector.Error as err:
-            flash(f'Error: {err}', 'danger')
-        finally:
-            cursor.close()
-            connection.close()
-
-    return render_template('write_review.html', isbn=isbn)
 
 # Search books with sorting
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/search', methods=['GET', 'POST'])
 def search_data():
     search_query = None
     rows = []
 
-    if request.method == 'POST':
-        search_query = request.form.get('search_query')
-        sort_by = request.form.get('sort_by')
+    search_query = request.form.get('search_query', '').strip()
+    sort_by = request.form.get('sort_by', 'title').strip()
+    sort_order = request.form.get('sort_order', 'ASC').strip()
 
-        connection = get_db_connection()
-        cursor = connection.cursor()
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+
+    if request.method == 'POST':
 
         query = """
-        SELECT isbn, title, author, genre, publisher, publication_year, page_count
-        FROM Books
-        WHERE isbn LIKE %s OR title LIKE %s OR author LIKE %s OR genre LIKE %s
+            SELECT Books.isbn, Books.title, Books.author, Books.genre, 
+                Books.publisher, Books.publication_year, Books.page_count,
+                AVG(Reviews.rating) AS average_rating
+            FROM Books
+            LEFT JOIN Reviews ON Books.isbn = Reviews.book_id
+            WHERE (%s = '' OR LOWER(Books.isbn) LIKE LOWER(%s))
+            AND (%s = '' OR LOWER(Books.title) LIKE LOWER(%s))
+            AND (%s = '' OR LOWER(Books.author) LIKE LOWER(%s))
+            AND (%s = '' OR LOWER(Books.genre) LIKE LOWER(%s))
+            GROUP BY Books.isbn
         """
-        if sort_by == 'popularity':
-            query += " ORDER BY popularity DESC"
-        elif sort_by == 'rating':
-            query += " ORDER BY average_rating DESC"
+
+        valid_sort_columns = ['title', 'author', 'genre', 'publication_year', 'average_rating']
+        if sort_by in valid_sort_columns and sort_order in ['ASC', 'DESC']:
+            query += f" ORDER BY {sort_by} {sort_order}"
 
         like_query = f"%{search_query}%"
-        cursor.execute(query, (like_query, like_query, like_query, like_query))
+        params = [search_query, like_query, search_query, like_query,
+                  search_query, like_query, search_query, like_query]
+        
+        cursor.execute(query, params)
         rows = cursor.fetchall()
 
         cursor.close()
         connection.close()
 
-    return render_template('search.html', search_query=search_query, rows=rows)
+    return render_template('search.html', search_query=search_query, rows=rows, sort_by=sort_by, sort_order=sort_order)
 
 @app.route('/advanced_search', methods=['GET', 'POST'])
 def advanced_search():
@@ -209,6 +172,9 @@ def advanced_search():
 
     # If the form is submitted
     if request.method == 'POST':
+        search_query = request.form.get('search_query', '').strip()
+        sort_by = request.form.get('sort_by', 'title').strip()
+        sort_order = request.form.get('sort_order', 'ASC').strip()
 
         isbn = request.form.get('isbn', '').strip()
         title = request.form.get('title', '').strip()
@@ -225,17 +191,25 @@ def advanced_search():
 
         # SQL query with wildcard search
         query = """
-        SELECT isbn, title, author, genre, publisher, publication_year, page_count
-        FROM Books
-        WHERE (%s = '' OR isbn LIKE %s)
-          AND (%s = '' OR title LIKE %s)
-          AND (%s = '' OR author LIKE %s)
-          AND (%s = '' OR genre LIKE %s)
-          AND (%s = '' OR publisher LIKE %s)
+          SELECT Books.isbn, Books.title, Books.author, Books.genre, 
+          Books.publisher, Books.publication_year, Books.page_count,
+          AVG(Reviews.rating) AS average_rating
+          FROM Books
+          LEFT JOIN Reviews ON Books.isbn = Reviews.book_id
+          WHERE (%s = '' OR LOWER(Books.isbn) LIKE LOWER(%s))
+          AND (%s = '' OR LOWER(Books.title) LIKE LOWER(%s))
+          AND (%s = '' OR LOWER(Books.author) LIKE LOWER(%s))
+          AND (%s = '' OR LOWER(Books.genre) LIKE LOWER(%s))
+          AND (%s = '' OR LOWER(publisher) LIKE LOWER(%s))
           AND (%s = '' OR publication_year = %s)
           AND (%s = '' OR page_count >= %s)
           AND (%s = '' OR page_count <= %s)
+          GROUP BY Books.isbn
         """
+        valid_sort_columns = ['title', 'author', 'genre', 'publication_year', 'average_rating']
+        if sort_by in valid_sort_columns and sort_order in ['ASC', 'DESC']:
+            query += f" ORDER BY {sort_by} {sort_order}"
+
         params = [
             isbn, f"%{isbn}%",
             title, f"%{title}%",
@@ -264,6 +238,11 @@ def add_review(isbn):
         flash('Please log in to leave a review.', 'warning')
         return redirect(url_for('login'))
     
+    search_query = request.args.get('search_query', '')
+    sort_by = request.args.get('sort_by', 'title')
+    sort_order = request.args.get('sort_order', 'ASC')
+
+
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
@@ -296,8 +275,8 @@ def add_review(isbn):
                 flash(f'Error submitting review: {err}', 'danger')
 
     cursor.close()
-    connection.close()
-    return render_template('add_review.html', book=book)
+    return render_template('add_review.html', book=book, search_query=search_query, sort_by=sort_by, sort_order=sort_order)
+
 
 
 if __name__ == '__main__':
